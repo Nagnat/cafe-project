@@ -5,41 +5,41 @@ pipeline {
         AWS_REGION = 'us-east-1'
         ECR_REGISTRY = '489836962577.dkr.ecr.us-east-1.amazonaws.com'
         IMAGE_NAME = 'jenkinstest'
+        IMAGE_TAG = "${ECR_REGISTRY}/${IMAGE_NAME}:latest"
     }
 
     stages {
         stage('Authenticate with ECR') {
             steps {
-                script {
-                    sh """
-                        aws ecr get-login-password --region $AWS_REGION | \
-                        docker login --username AWS --password-stdin $ECR_REGISTRY
-                    """
-                }
+                sh """
+                    aws ecr get-login-password --region $AWS_REGION | \
+                    docker login --username AWS --password-stdin $ECR_REGISTRY
+                """
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t $IMAGE_NAME .'
+                sh "docker build -t $IMAGE_NAME ."
             }
         }
 
         stage('Tag Docker Image') {
             steps {
-                sh 'docker tag $IMAGE_NAME:latest $ECR_REGISTRY/$IMAGE_NAME:latest'
+                sh "docker tag $IMAGE_NAME:latest $IMAGE_TAG"
             }
         }
 
         stage('Push to ECR') {
             steps {
-                sh 'docker push $ECR_REGISTRY/$IMAGE_NAME:latest'
+                sh "docker push $IMAGE_TAG"
             }
         }
 
-       stage('Deploy to EKS Pod') {
+        stage('Deploy to EKS Pod') {
             steps {
-                writeFile file: 'pod.yaml', text: """
+                script {
+                    writeFile file: 'pod.yaml', text: """
 apiVersion: v1
 kind: Pod
 metadata:
@@ -47,10 +47,11 @@ metadata:
 spec:
   containers:
   - name: test
-    image: $ECR_REGISTRY/$IMAGE_NAME:latest
+    image: $IMAGE_TAG
     ports:
     - containerPort: 80
 """
+                }
                 sh 'kubectl apply -f pod.yaml'
             }
         }
@@ -60,6 +61,5 @@ spec:
                 sh 'kubectl get pods'
             }
         }
-    }
     }
 }
