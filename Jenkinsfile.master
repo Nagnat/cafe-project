@@ -1,0 +1,40 @@
+pipeline {
+    agent any
+
+    environment {
+        AWS_REGION = 'us-east-1'
+        ECR_REGISTRY = '489836962577.dkr.ecr.us-east-1.amazonaws.com'
+        IMAGE_NAME = 'jenkinstest'
+    }
+
+    stages {
+        stage('Authenticate with ECR') {
+            steps {
+                script {
+                    sh """
+                        aws ecr get-login-password --region $AWS_REGION | \
+                        docker login --username AWS --password-stdin $ECR_REGISTRY
+                    """
+                }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t $IMAGE_NAME .'
+            }
+        }
+
+        stage('Tag Docker Image') {
+            steps {
+                sh 'docker tag $IMAGE_NAME:latest $ECR_REGISTRY/$IMAGE_NAME:latest'
+            }
+        }
+
+        stage('Push to ECR') {
+            steps {
+                sh 'docker push $ECR_REGISTRY/$IMAGE_NAME:latest'
+            }
+        }
+    }
+}
