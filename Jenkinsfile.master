@@ -36,5 +36,30 @@ pipeline {
                 sh 'docker push $ECR_REGISTRY/$IMAGE_NAME:latest'
             }
         }
+
+       stage('Deploy to EKS Pod') {
+            steps {
+                writeFile file: 'pod.yaml', text: """
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test
+spec:
+  containers:
+  - name: test
+    image: $ECR_REGISTRY/$IMAGE_NAME:latest
+    ports:
+    - containerPort: 80
+"""
+                sh 'kubectl apply -f pod.yaml'
+            }
+        }
+
+        stage('Verify Pod') {
+            steps {
+                sh 'kubectl get pods'
+            }
+        }
+    }
     }
 }
