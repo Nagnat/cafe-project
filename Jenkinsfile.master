@@ -43,12 +43,12 @@ pipeline {
 apiVersion: v1
 kind: Pod
 metadata:
-  name: test
+  name: java-test
   labels:
     env: prod
 spec:
   containers:
-  - name: test
+  - name: java-test
     image: $IMAGE_TAG
     ports:
     - containerPort: 80
